@@ -3,16 +3,50 @@ This is the script from the now defunct [AAXtoMP3](https://github.com/KrumpetPir
 
 However, this script is going to need some tweaks in order to be a viable solution for my library.
 
-**2024.02.26**
+**2024.02.25**
 --------------
 - starting fresh
+
+**2024.02.26**
+--------------
+- The current naming scheme of my library uses `<author> / <book title> / <book title>.<ext>`. This may be fairly common of a layout, but when it comes to "book title" well, there are many ways this could be formatted. The majority of my collection is comprised of "series" based books. But there are also single standalone books intermingling in there as well. So for example, I may have a author folder with series and standalone books,
+
+  :file_folder: Keith C. Blackmore  
+  &#8193; :file_folder: Mountain Man, Book 01 - Mountain Man  
+  &#8193;&#8193; :loud_sound: Book 01 - Mountain Man.m4a  
+  &#8193; :file_folder: Mountain Man, Book 02 - Safari  
+  &#8193;&#8193; :loud_sound: Book 02 - Safari.m4a  
+  &#8193; :file_folder: Mountain Man, Book 03 - Hellifax  
+  &#8193;&#8193; :loud_sound: Book 03 - Hellifax.m4a  
+  &#8193; :file_folder: The Missing Boatman  
+  &#8193;&#8193; :loud_sound: The Missing Boatman.m4a  
+  &#8193; :file_folder: White Sands, Red Steel  
+  &#8193;&#8193; :loud_sound: White Sands, Red Steel.m4a  
+
+  In order to facilitate this layout, some tweaks to the script were required.
+
+  The script already had built support of [mkb79's](https://github.com/mkb79) [audible-cli](https://github.com/mkb79/audible-cli). This support allowed the script to obtain "series" information. The "audible-cli" tool is a CLI for [mkb79's](https://github.com/mkb79) other package [Audible](https://github.com/mkb79/Audible). This tool sets up the authentication and registration to Audible, but also uses the Audible API to collect book information.  
+  Being that the script is already setup to use the "Audible" package book information (library.tsv) for series data, I have added additional calls to also extract the "title" and "subtitle" data. With this information I was able to manipulate the folder structure and metadata.  
+  - Series books now get: `<series_title>, <series_sequence> - <title>`
+  - Standalone books get: `<title> - <subtitle>`
+
+  Included are checks to make sure that "subtitle" has a value, and if it does not, then it will not be used.  
+  These variants have been used to re-create the `<album>` metadata as well, so that proper tagging is also a thing. In addition zero padding has been incorporated, so that "series_sequence" will start with a `0` on single digit series titles (e.g. "Book 01", "Book 02", etc).  
+
+- Audible also uses colons (`:`) in the book names (all my series titled books had colons). This required some additional tweaks. Viewing the folder structure of books with colons on a windows machine was just not working out.  
+
+- The script used a bash `noclobber` option that just wasn't working very well.  Or let me say, it worked, but on certain book titles instead of skipping the book, it would create the book folder structure again in the current book folder and then re-rip the book into the new folder.  If I ran the script again, it would do this again and again, creating several rips of the book, several tiers deep.  
+  I have pulled the "noclobber" option out, and replaced it with a `overwrite=0` variable, and some "if var exists, then..." code.  
+
+- Renamed script to `audible-convert`  
+  The script can convert to more than just MP3, so it should have a bit more universal name.  
 
 
 <br /><br /><br /><br /><br />
 *The original AAXtoMP3 documentation for reference.*  
 <details>
     
-*<summary>Old AAXtoMP3 Documentation</summary>*
+*<summary>AAXtoMP3 Documentation</summary>*
     
 ## AAXtoMP3
 The purpose of this software is to convert AAX (or AAXC) files to common MP3, M4A, M4B, flac and ogg formats
