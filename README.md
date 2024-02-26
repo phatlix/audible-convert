@@ -1,17 +1,15 @@
 # AUDIBLE-CONVERT
-This is a fork of the defunct [AAXtoMP3](https://github.com/KrumpetPirate/AAXtoMP3) script. Some really good work was thrown at this project.
+This is the script from the now defunct [AAXtoMP3](https://github.com/KrumpetPirate/AAXtoMP3). Some really good work was thrown at that project.
 
 However, this script is going to need some tweaks in order to be a viable solution for my library.
 
-I am keeping the original documentation below for reference. I will also be adding additional  
-notes *(just below)* regarding changes I have made.  
-    
 **2024.02.26**
 --------------
-- fresh fork
+- starting fresh
 
 
 <br /><br /><br /><br /><br />
+*The original AAXtoMP3 documentation for reference.*  
 <details>
     
 *<summary>Old AAXtoMP3 Documentation</summary>*
