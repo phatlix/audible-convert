@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-
+#
+# REV: 2024022605
+#
 
 # ========================================================================
 # Command Line Options
 
 # Usage Synopsis.
-usage=$'\nUsage: AAXtoMP3 [--flac] [--aac] [--opus ] [--single] [--level <COMPRESSIONLEVEL>]
+usage=$'\nUsage: audible-convert [--flac] [--aac] [--opus ] [--single] [--level <COMPRESSIONLEVEL>]
 [--chaptered] [-e:mp3] [-e:m4a] [-e:m4b] [--authcode <AUTHCODE>] [--no-clobber]
 [--target_dir <PATH>] [--complete_dir <PATH>] [--validate] [--loglevel <LOGLEVEL>]
 [--keep-author <N>] [--author <AUTHOR>] [--{dir,file,chapter}-naming-scheme <STRING>]  
-[--use-audible-cli-data] [--audible-cli-library-file <LIBRARY_PATH>] [--continue <CHAPTERNUMBER>] {FILES}\n'
-codec=libmp3lame            # Default encoder.
-extension=mp3               # Default encoder extension.
+[--use-audible-cli-data] [--audible-cli-library-file <LIBRARY_PATH>] [--carryon <CHAPTERNUMBER>] {FILES}\n'
+codec=copy                  # Default encoder.
+extension=m4a               # Default encoder extension.
 level=-1                    # Compression level. Can be given for mp3, flac and opus. -1 = default/not specified.
-mode=chaptered              # Multi file output
+mode=single                 # Multi file output
 auth_code=                  # Required to be set via file or option.
 targetdir=                  # Optional output location.  Note default is basedir of AAX file.
 dirNameScheme=              # Custom directory naming scheme, default is $genre/$artist/$title
@@ -23,15 +25,15 @@ customFNS=0
 chapterNameScheme=          # Custom chapter naming scheme, default is '$title-$(printf %0${#chaptercount}d $chapternum) $chapter' (BookTitle-01 Chapter 1)
 customCNS=0
 completedir=                # Optional location to move aax files once the decoding is complete.
-container=mp3               # Just in case we need to change the container.  Used for M4A to M4B
+container=mp4               # Just in case we need to change the container.  Used for M4A to M4B
 VALIDATE=0                  # Validate the input aax file(s) only.  No Transcoding of files will occur
 loglevel=1                  # Loglevel: 0: Show progress only; 1: default; 2: a little more information, timestamps; 3: debug
-noclobber=0                 # Default off, clobber only if flag is enabled
-continue=0                  # Default off, If set Transcoding is skipped and chapter splitting starts at chapter continueAt.
-continueAt=1                # Optional chapter to continue splitting the chapters.
-keepArtist=-1               # Default off, if set change author metadata to use the passed argument as field
+overwrite=0                 # If you want to overwrite your library and re-rip your files, set this to 1
+carryon=0                   # Default off, If set Transcoding is skipped and chapter splitting starts at chapter continueAt.
+carryonAt=1                 # Optional chapter to continue splitting the chapters.
+keepArtist=1                # Default off, if set change author metadata to use the passed argument as field
 authorOverride=             # Override the author, ignoring the metadata           
-audibleCli=0                # Default off, Use additional data gathered from mkb79/audible-cli
+audibleCli=1                # Default off, Use additional data gathered from mkb79/audible-cli
 aaxc_key=                   # Initialize variables, in case we need them in debug_vars
 aaxc_iv=                    # Initialize variables, in case we need them in debug_vars
 ffmpegPath=                 # Set a custom path, useful for using the updated version that supports aaxc
@@ -72,8 +74,6 @@ while true; do
     -C | --complete_dir ) completedir="$2";                                             shift 2 ;;
                       # Authorization code associate with the AAX file(s)
     -A | --authcode   ) auth_code="$2";                                                 shift 2 ;;
-                      # Don't overwrite the target directory if it already exists
-    -n | --no-clobber ) noclobber=1;                                                    shift ;;
                       # Extremely verbose output.
     -d | --debug      ) loglevel=3;                                                     shift ;;
                       # Set loglevel.
@@ -81,7 +81,7 @@ while true; do
                       # Validate ONLY the aax file(s) No transcoding occurs
     -V | --validate   ) VALIDATE=1;                                                     shift ;;
                       # continue splitting chapters at chapter continueAt
-    --continue        ) continueAt="$2"; continue=1;                                    shift 2 ;;
+    --carryon        ) carryonAt="$2"; carryon=1;                                    shift 2 ;;
                       # Use additional data got with mkb79/audible-cli
     --use-audible-cli-data ) audibleCli=1;                                              shift ;;
                       # Path of the library-file, generated by mkb79/audible-cli (audible library export -o ./library.tsv)
@@ -116,7 +116,8 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # Setup safer bash script defaults.
-set -o errexit -o noclobber -o nounset -o pipefail
+#set -o errexit -o noclobber -o nounset -o pipefail
+set -o errexit -o nounset -o pipefail
 
 # ========================================================================
 # Utility Functions
@@ -291,7 +292,7 @@ fi
 if [[ "x${container}" == "xmp4" && "x$(type -P mp4art)" == "x" ]]; then
   echo "WARN mp4art was not found on your env PATH variable"
   echo "Without it, this script will not be able to add cover art to"
-  echo "m4b files. Note if there are no other errors the AAXtoMP3 will"
+  echo "m4b files. Note if there are no other errors the audible-convert will"
   echo "continue. However no cover art will be added to the output."
   echo "INSTALL:"
   echo "MacOS:   brew install mp4v2"
@@ -303,7 +304,7 @@ fi
 if [[ "x${container}" == "xmp4" && "x$(type -P mp4chaps)" == "x" ]]; then
   echo "WARN mp4chaps was not found on your env PATH variable"
   echo "Without it, this script will not be able to add chapters to"
-  echo "m4a/b files. Note if there are no other errors the AAXtoMP3 will"
+  echo "m4a/b files. Note if there are no other errors the audible-convert will"
   echo "continue. However no chapter data will be added to the output."
   echo "INSTALL:"
   echo "MacOS:   brew install mp4v2"
@@ -315,7 +316,7 @@ fi
 if [[ "x$(type -P mediainfo)" == "x" ]]; then
   echo "WARN mediainfo was not found on your env PATH variable"
   echo "Without it, this script will not be able to add the narrator"
-  echo "and description tags. Note if there are no other errors the AAXtoMP3"
+  echo "and description tags. Note if there are no other errors the audible-convert"
   echo "will continue. However no such tags will be added to the output."
   echo "INSTALL:"
   echo "MacOS:   brew install mediainfo"
@@ -473,7 +474,7 @@ validate_extra_files() {
   extra_cover_file="$(eval ${extra_find_command})"
   extra_eval_comm="$(eval echo ${extra_find_command})"
   set -e errexit
-
+ 
   if [[ "${aaxc}" == "1" ]]; then
     # bash trick to get file w\o extention (delete from end to the first '.')
     extra_voucher="${extra_media_file%.*}.voucher"
@@ -564,9 +565,13 @@ CHAPTER\((.key))NAME=\(.value.title)"' "${extra_chapter_file}" > "${tmp_chapter_
       if [[ ! -z "${asin}" ]]; then
         lib_entry=$($GREP "^${asin}" "${library_file}")
         if [[ ! -z "${lib_entry}" ]]; then
-          series_title=$(echo "${lib_entry}" | awk -F '\t' '{print $6}')
-          series_sequence=$(echo "${lib_entry}" | awk -F '\t' '{print $7}')
+          title=$(echo "${lib_entry}" | awk -F '\t' '{print $2}')
+          subtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $3}')
+          series_title=$(echo "${lib_entry}" | awk -F '\t' '{print $7}')
+          series_sequence=$(echo "${lib_entry}" | awk -F '\t' '{print $8}')
           $SED -i "/^  Metadata:/a\\
+    title           : ${title}\\
+    subtitle        : ${subtitle}\\
     series          : ${series_title}\\
     series_sequence : ${series_sequence}" "${metadata_file}"
         fi
@@ -673,14 +678,28 @@ do
       album_artist="$(get_metadata_value album_artist)"
     fi
   fi
-  title=$(get_metadata_value title)
+
+  title="$(get_metadata_value title | $SED -E 's|:|\ -|g')"
   title=${title:0:128}
-  bitrate="$(get_bitrate)k"
-  album="$(get_metadata_value album)"
+  subtitle="$(get_metadata_value subtitle | $SED -E 's|:|\ -|g')"
+
+  series="$(get_metadata_value series | $SED -E 's|:|\ -|g')"
+  series_seq="$(get_metadata_value series_sequence)"
+  series_sequence="Book $(echo "${series_seq}" | sed -e :a -e 's/^.\{1,1\}$/0&/;ta')"
+
+  if [ ! -z "${series}" ]; then
+    album="${series}, ${series_sequence}"
+  else
+    if [ ! -z "${subtitle}" ]; then
+      album="${subtitle}"
+    else
+      album=""
+    fi
+  fi
+
   album_date="$(get_metadata_value date)"
+  bitrate="$(get_bitrate)k"
   copyright="$(get_metadata_value copyright)"
-  series="$(get_metadata_value series)"
-  series_sequence="$(get_metadata_value series_sequence)"
 
   # Get more tags with mediainfo
   if [[ $(type -P mediainfo) ]]; then
@@ -694,11 +713,22 @@ do
   fi
 
   # Define the output_directory
-  if [ "${customDNS}" == "1" ]; then
-    currentDirNameScheme="$(eval echo "${dirNameScheme}")"
+  if [ ! -z "${series}" ]; then
+    if [ "${customDNS}" == "1" ]; then
+      currentDirNameScheme="$(eval echo "${dirNameScheme}")"
+    else
+      currentDirNameScheme="$artist/$series, $series_sequence - $title"
+    fi
   else
-    # The Default
-    currentDirNameScheme="${genre}/${artist}/${title}"
+    if [ "${customDNS}" == "1" ]; then
+      currentDirNameScheme="$(eval echo "${dirNameScheme}")"
+    else
+      if [ ! -z "${album}" ]; then
+        currentDirNameScheme="$artist/$title - $album"
+      else
+        currentDirNameScheme="$artist/$title"
+      fi
+    fi
   fi
 
   # If we defined a target directory, use it. Otherwise use the location of the AAX file
@@ -709,19 +739,35 @@ do
   fi
 
   # Define the output_file
-  if [ "${customFNS}" == "1" ]; then
-    currentFileNameScheme="$(eval echo "${fileNameScheme}")"
+  if [ ! -z "${series}" ]; then
+    if [ "${customFNS}" == "1" ]; then
+      currentFileNameScheme="$(eval echo "${fileNameScheme}")"
+    else
+      currentFileNameScheme="$series_sequence, $title"
+    fi
   else
-    # The Default
-    currentFileNameScheme="${title}"
+    if [ "${customFNS}" == "1" ]; then
+      currentFileNameScheme="$(eval echo "${fileNameScheme}")"
+    else
+      if [ ! -z "${album}" ]; then
+        currentFileNameScheme="$title - $album"
+      else
+        currentFileNameScheme="$title"
+      fi
+    fi
   fi
+
   output_file="${output_directory}/${currentFileNameScheme}.${extension}"
 
-  if [[ "${noclobber}" = "1" ]] && [[ -d "${output_directory}" ]]; then
-    log "Noclobber enabled but directory '${output_directory}' exists. Skipping to avoid overwriting"
+
+
+  if [[ "${overwrite}" == "0" ]] && [[ -f "" ]]; then
     rm -f "${metadata_file}" "${tmp_chapter_file}"
     continue
   fi
+
+
+
   mkdir -p "${output_directory}"
 
   if [ "$((${loglevel} > 0))" = "1" ]; then
@@ -753,16 +799,23 @@ do
   if [ "${level}" != "-1" ]; then
     compression_level_param="-compression_level ${level}"
   fi
+
+  if [ "${overwrite}" == "0" ]; then
+    nooverwrite="-n"
+  else
+    nooverwrite="-y"
+  fi
   
   # -----
-  if [ "${continue}" == "0" ]; then
+  if [ "${carryon}" == "0" ]; then
     # This is the main work horse command.  This is the primary transcoder.
     # This is the primary transcode. All the heavy lifting is here.
-    debug '"$FFMPEG" -loglevel error -stats ${decrypt_param} -i "${aax_file}" -vn -codec:a "${codec}" -ab ${bitrate} -map_metadata -1 -metadata title="${title}" -metadata artist="${artist}" -metadata album_artist="${album_artist}" -metadata album="${album}" -metadata date="${album_date}" -metadata track="1/1" -metadata genre="${genre}" -metadata copyright="${copyright}" "${output_file}"'
-    </dev/null "$FFMPEG" -loglevel error \
+    debug '"$FFMPEG" -loglevel error -stats ${decrypt_param} -i "${aax_file}" "${nooverwrite}" -vn -codec:a "${codec}" -ab ${bitrate} -map_metadata -1 -metadata title="${title}" -metadata artist="${artist}" -metadata album_artist="${album_artist}" -metadata album="${album}" -metadata date="${album_date}" -metadata track="1/1" -metadata genre="${genre}" -metadata copyright="${copyright}" "${output_file}"' 
+      </dev/null "$FFMPEG" -loglevel error \
       -stats \
       ${decrypt_param} \
       -i "${aax_file}" \
+      ${nooverwrite} \
       -vn \
       -codec:a "${codec}" \
       ${compression_level_param} \
@@ -783,6 +836,7 @@ do
       -metadata series_sequence="${series_sequence}" \
       -f ${container} \
       "${output_file}"
+
     if [ "$((${loglevel} > 0))" == "1" ]; then
       log "Created ${output_file}."
     fi
@@ -790,7 +844,7 @@ do
   fi
   # Grab the cover art if available.
   cover_file="${output_directory}/${currentFileNameScheme}.jpg"
-  if [ "${continue}" == "0" ]; then
+  if [ "${carryon}" == "0" ]; then
     if [ "${audibleCli}" == "1" ]; then
       # We have a better quality cover file, copy it.
       if [ "$((${loglevel} > 1))" == "1" ]; then
@@ -824,7 +878,7 @@ do
   if [ "${mode}" == "chaptered" ]; then
     # Playlist m3u support
     playlist_file="${output_directory}/${currentFileNameScheme}.m3u"
-    if [ "${continue}" == "0" ]; then
+    if [ "${carryon}" == "0" ]; then
       if [ "$((${loglevel} > 0))" == "1" ]; then
         log "Creating PlayList ${currentFileNameScheme}.m3u"
       fi
@@ -835,8 +889,8 @@ do
     chaptercount=$($GREP -Pc "Chapter.*start.*end" $metadata_file)
     if [ "$((${loglevel} > 0))" == "1" ]; then
       log "Extracting ${chaptercount} chapter files from ${output_file}..."
-      if [ "${continue}" == "1" ]; then
-        log "Continuing at chapter ${continueAt}:"
+      if [ "${carryon}" == "1" ]; then
+        log "Continuing at chapter ${carryonAt}:"
       fi
     fi
     chapternum=1
@@ -903,7 +957,7 @@ do
 
         # Big Long chapter debug
         debug_vars "Chapter Variables:" cover_file chapter_start chapter_end chapternum chapter chapterNameScheme chapter_title chapter_file
-        if [ "$((${continueAt} > ${chapternum}))" = "0" ]; then
+        if [ "$((${carryonAt} > ${chapternum}))" = "0" ]; then
           # Extract chapter by time stamps start and finish of chapter.
           # This extracts based on time stamps start and end.
           if [ "$((${loglevel} > 1))" == "1" ]; then
