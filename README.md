@@ -41,6 +41,12 @@ However, this script is going to need some tweaks in order to be a viable soluti
 - Renamed script to `audible-convert`  
   The script can convert to more than just MP3, so it should have a bit more universal name.  
 
+## Anti-Piracy Notice
+Note that this project **does NOT "crack"** the DRM. It simply allows the user to use their own encryption key (fetched from Audible servers) to decrypt the audiobook in the same manner that the official audiobook playing software does.  
+
+Please only use this application for gaining full access to your own audiobooks for archiving/conversion/convenience. DeDRMed audiobooks should not be uploaded to open servers, torrents, or other methods of mass distribution. No help will be given to people doing such things. Authors, retailers, and publishers all need to make a living, so that they can continue to produce audiobooks for us to hear, and enjoy. Don’t be a parasite.
+
+*<sub>Borrowed from original documentation, who borrow from [Apprentice Alf’s Blog](https://apprenticealf.wordpress.com).</sub>*
 
 <br /><br /><br /><br /><br />
 *The original AAXtoMP3 documentation for reference.*  
