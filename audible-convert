@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# REV: 2024022605
+# REV: 2024022703
 #
 
 # ========================================================================
@@ -11,7 +11,7 @@ usage=$'\nUsage: audible-convert [--flac] [--aac] [--opus ] [--single] [--level 
 [--chaptered] [-e:mp3] [-e:m4a] [-e:m4b] [--authcode <AUTHCODE>] [--no-clobber]
 [--target_dir <PATH>] [--complete_dir <PATH>] [--validate] [--loglevel <LOGLEVEL>]
 [--keep-author <N>] [--author <AUTHOR>] [--{dir,file,chapter}-naming-scheme <STRING>]  
-[--use-audible-cli-data] [--audible-cli-library-file <LIBRARY_PATH>] [--carryon <CHAPTERNUMBER>] {FILES}\n'
+[--use-audible-cli-data] [--audible-cli-library-file <LIBRARY_PATH>] [--overwrite <NUM>] [--carryon <CHAPTERNUMBER>] {FILES}\n'
 codec=copy                  # Default encoder.
 extension=m4a               # Default encoder extension.
 level=-1                    # Compression level. Can be given for mp3, flac and opus. -1 = default/not specified.
@@ -74,6 +74,8 @@ while true; do
     -C | --complete_dir ) completedir="$2";                                             shift 2 ;;
                       # Authorization code associate with the AAX file(s)
     -A | --authcode   ) auth_code="$2";                                                 shift 2 ;;
+                      # Don't overwrite the target directory if it already exists
+    --overwrite       ) overwrite=0;                                                    shift ;;
                       # Extremely verbose output.
     -d | --debug      ) loglevel=3;                                                     shift ;;
                       # Set loglevel.
@@ -117,7 +119,7 @@ fi
 
 # Setup safer bash script defaults.
 #set -o errexit -o noclobber -o nounset -o pipefail
-#set -o errexit -o nounset -o pipefail
+set -o errexit -o nounset -o pipefail
 
 # ========================================================================
 # Utility Functions
@@ -687,30 +689,14 @@ do
   series_seq="$(get_metadata_value series_sequence)"
   series_sequence="Book $(echo "${series_seq}" | sed -e :a -e 's/^.\{1,1\}$/0&/;ta')"
 
-
-  if [ ! -n "${series_seq}" ] && [ -n "${series}" ]; then
-
-    series_seqx=$(echo "${subtitle}" | grep -P -o '[0-9]+' | head -1 | sed -e :a -e 's/^.\{1,1\}$/0&/;ta')
-
-    if [ -n "${series_seqx}" ]; then
-      series_seqxval="Book $(echo "${series_seqx}" | sed -e :a -e 's/^.\{1,1\}$/0&/;ta')"
-    fi
-
-  fi
-
-
-  if [ -n "${series_seq}" ]; then
+  if [ ! -z "${series}" ]; then
     album="${series}, ${series_sequence}"
-  else
-    if [ ! -n "${series_seq}" ] && [ -n "${series_seqx}" ]; then
-      album="${series}, ${series_seqxval}"
   else
     if [ ! -z "${subtitle}" ]; then
       album="${subtitle}"
-  else
+    else
       album=""
     fi
-   fi
   fi
 
   album_date="$(get_metadata_value date)"
@@ -729,18 +715,11 @@ do
   fi
 
   # Define the output_directory
-  if [ -n "${series_seq}" ]; then
+  if [ ! -z "${series}" ]; then
     if [ "${customDNS}" == "1" ]; then
       currentDirNameScheme="$(eval echo "${dirNameScheme}")"
     else
       currentDirNameScheme="$artist/$series, $series_sequence - $title"
-    fi
-  else
-  if [ ! -n "${series_seq}" ] && [ -n "${series_seqx}" ]; then
-    if [ "${customDNS}" == "1" ]; then
-      currentDirNameScheme="$(eval echo "${dirNameScheme}")"
-    else
-      currentDirNameScheme="$artist/${series}, $series_seqxval - $title"
     fi
   else
     if [ "${customDNS}" == "1" ]; then
@@ -752,7 +731,6 @@ do
         currentDirNameScheme="$artist/$title"
       fi
     fi
-   fi
   fi
 
   # If we defined a target directory, use it. Otherwise use the location of the AAX file
@@ -763,19 +741,12 @@ do
   fi
 
   # Define the output_file
-  if [ -n "${series_seq}" ]; then
+  if [ ! -z "${series}" ]; then
     if [ "${customFNS}" == "1" ]; then
       currentFileNameScheme="$(eval echo "${fileNameScheme}")"
     else
       currentFileNameScheme="$series_sequence, $title"
     fi
-  else
-    if [ ! -n "${series_seq}" ] && [ -n "${series_seqx}" ]; then
-      if [ "${customFNS}" == "1" ]; then
-        currentFileNameScheme="$(eval echo "${fileNameScheme}")"
-      else
-        currentFileNameScheme="$series_seqxval, $title"
-      fi
   else
     if [ "${customFNS}" == "1" ]; then
       currentFileNameScheme="$(eval echo "${fileNameScheme}")"
@@ -786,16 +757,18 @@ do
         currentFileNameScheme="$title"
       fi
     fi
-   fi
   fi
 
   output_file="${output_directory}/${currentFileNameScheme}.${extension}"
 
 
-  if [[ "${overwrite}" == "0" ]] && [[ -f "${output_file}" ]]; then
+
+  if [[ "${overwrite}" == "0" ]] && [[ -f "" ]]; then
     rm -f "${metadata_file}" "${tmp_chapter_file}"
     continue
   fi
+
+
 
   mkdir -p "${output_directory}"
 
