@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# REV: 2024022703
+# REV: 2024022801
 #
 
 # ========================================================================
@@ -11,7 +11,7 @@ usage=$'\nUsage: audible-convert [--flac] [--aac] [--opus ] [--single] [--level 
 [--chaptered] [-e:mp3] [-e:m4a] [-e:m4b] [--authcode <AUTHCODE>] [--no-clobber]
 [--target_dir <PATH>] [--complete_dir <PATH>] [--validate] [--loglevel <LOGLEVEL>]
 [--keep-author <N>] [--author <AUTHOR>] [--{dir,file,chapter}-naming-scheme <STRING>]  
-[--use-audible-cli-data] [--audible-cli-library-file <LIBRARY_PATH>] [--overwrite <NUM>] [--carryon <CHAPTERNUMBER>] {FILES}\n'
+[--use-audible-cli-data] [--audible-cli-library-file <LIBRARY_PATH>] [--carryon <CHAPTERNUMBER>] {FILES}\n'
 codec=copy                  # Default encoder.
 extension=m4a               # Default encoder extension.
 level=-1                    # Compression level. Can be given for mp3, flac and opus. -1 = default/not specified.
@@ -74,8 +74,6 @@ while true; do
     -C | --complete_dir ) completedir="$2";                                             shift 2 ;;
                       # Authorization code associate with the AAX file(s)
     -A | --authcode   ) auth_code="$2";                                                 shift 2 ;;
-                      # Don't overwrite the target directory if it already exists
-    --overwrite       ) overwrite=0;                                                    shift ;;
                       # Extremely verbose output.
     -d | --debug      ) loglevel=3;                                                     shift ;;
                       # Set loglevel.
@@ -118,7 +116,6 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # Setup safer bash script defaults.
-#set -o errexit -o noclobber -o nounset -o pipefail
 set -o errexit -o nounset -o pipefail
 
 # ========================================================================
@@ -763,7 +760,7 @@ do
 
 
 
-  if [[ "${overwrite}" == "0" ]] && [[ -f "" ]]; then
+  if [[ "${overwrite}" == "0" ]] && [[ -f "output_file" ]]; then
     rm -f "${metadata_file}" "${tmp_chapter_file}"
     continue
   fi
