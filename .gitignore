@@ -1,0 +1,11 @@
+updchk
+*.tsv
+*.bak
+*.aax
+*.aaxc
+*.voucher
+*.json
+*.jpg
+*.mp3
+*.m4a
+*.m4b
