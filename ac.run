@@ -1,0 +1,123 @@
+#!/bin/bash
+
+DS=$(date "+%Y-%m-%d %T");
+BS=$(date "+%Y%m%d%H%M");
+
+GRY="\e[90m"
+CYN="\e[96m"
+WHT="\e[97m"
+DRD="\e[31m"
+YLW="\e[93m"
+NON="\e[0m"
+
+WRKDIR=$PWD
+AAXDIR=$WRKDIR/aax
+BKSDIR=$WRKDIR/books
+RUNDIR=$WRKDIR/run
+
+mkdir -p {"$AAXDIR","$BKSDIR","$RUNDIR"}
+
+PATH="$WRKDIR:$PATH"
+export PATH
+
+cd $RUNDIR
+
+
+### ENABLE/DISABLE FUNCTIONS AT THE BOTTOM ###
+
+
+function initial() {
+
+# INITIAL RUN - WILL DOWNLOAD YOUR ENTIRE LIBRARY AND A NEW LIBRARY.TSV FILE.
+# PLEASE CHECK THE README FOR HOW AUDIBLE-CONVERT IS CONFIGURED AND HOW BEST
+# TO GO ABOUT GETTING A NICE CONVERTED LIBRARY, RIGHT OUT THE GATE. I ALREADY
+# SUFFERED THE HEADACHES SO YOU DONT HAVE TO. THIS RUN WILL ALSO CREATE THE
+# INITIAL TIME STAMPED 'updchk' FILE, USED BY THE SCHEDULE FUNCTION.
+
+  audible library export --output ./library.tsv
+  audible download --all --aaxc --cover --cover-size 1215 --chapter
+  echo $DS > $WRKDIR/updchk
+
+  if ! [ -f $AAXDIR/library.tsv.original ]; then
+    cp ./library.tsv ./library.tsv.original
+  fi
+
+}
+
+
+function schedule() {
+
+# SCHEDULED UPDATE - WILL READ THE TIME STAMPED FILE 'updchk', AND WILL CHECK FOR ANY NEW BOOKS 
+# SINCE THE LAST RUN AND DOWNLOAD THEM.  THE 'updchk' FILE WILL BE UPDATED WITH A NEW TIME STAMP
+# AFTER FINISHING THE CHECK/DOWNLOAD.  ONCE YOUR LIBRARY IS IN PLACE AND YOU LIKE IT, YOU CAN
+# DISABLE THE INITIAL RUN FUNCTION, AND SET THIS SCRIPT UP ON A CRON FOR AUTO CONVERSION.
+# CHECK THE README FOR MORE OF MY NOTES.
+
+  if [ -f $WRKDIR/updchk ]; then 
+    UDT="$(cat $WRKDIR/updchk)"
+    printf "\n${WHT}LAST RUN:${NON} ${CYN}$(echo $UDT)${NON}\n"
+    audible library export --output ./library.tsv
+    audible download --start-date "$UDT" --all --aaxc --cover --cover-size 1215 --chapter
+    echo $DS > $WRKDIR/updchk
+  else
+    printf "\n${DRD}MISSING ${YLW}'updchk' ${DRD}FILE IN ${YLW}${WRKDIR}${DRD}.\n"
+    printf "\n${CYN}RUN THE FOLLOWING IF YOU NEED TO CREATE THE FILE MANUALLY:${NON}\n${YLW}"
+    CTR='echo $(date "+%Y-%m-%d %T") > updchk'
+    printf "%s\n" "$CTR"; eval "$CTR" && rm -f updchk
+    printf "\n${NON}${GRY}ABORTING UPDATE${NON}\n\n"
+    exit 0
+  fi
+
+}
+
+
+function convert() {
+
+# CONVERT PROCESS - SHOULD RUN AFTER AAX/AAXC DOWNLOADS.  ALL AAX/AAXC RELATED FILES WILL BE
+# MOVED TO THE AAX DIRECTORY AND CONVERTED BOOKS WILL BE PLACED IN THE BOOKS DIRECTORY.
+# AUDIBLE-CONVERT WILL CHECK THE BOOKS DIRECTORY EACH TIME IT IS RAN, TO CHECK FOR ALREADY
+# COMPLETED BOOKS.  PLEASE CHECK THE README FOR MORE DETAIL ON AUDIBLE-CONVERTS DEFAULT 
+# SETTINGS AND ITS INTRINSIC CONFIGURATION.
+
+  find . -name "*.aaxc" -print0 | while read -d $'\0' FILE
+  do
+    printf "\n${CYN}CHECKING:${NON} ${WHT}$FILE${NON}\n\n"
+    audible-convert --target_dir $BKSDIR "$FILE"
+    mv ./* $AAXDIR
+  done
+  mv library.tsv $AAXDIR/$BS.library.tsv
+
+}
+
+
+function clean() {
+
+# CLEAN UP - WILL CLEAR THE CHAPTERS FILE OUT OF ALL THE BOOK DIRECTORIES.  A COMMENTED 
+# COMMAND LINE IS ALSO AVAILABLE TO CLEAR ALL THE IMAGE FILES AS WELL, IF YOU SO CHOOSE 
+# TO REMOVE THEM.  THEY ARE NICE BIG COVER ART IMAGES, SO YOUR CHOICE.  THE BOOKS WILL 
+# HAVE THE COVER ART ALREADY IMPORTED AND THE CHAPTERS, SO THERE REALLY IS NO NEED FOR 
+# THEM UNLESS YOUR DOING SOME ADDITION WORK.
+
+  #printf "\n${CYN}CLEARING JPG COVER ART (excluding poster.jpg files)...${NON}\n"
+  #find $BKSDIR -depth ! -name 'poster.jpg' -name '*.jpg' -type f -delete
+  printf "\n${CYN}CLEARING CHAPTER FILES...${NON}\n"
+  find $BKSDIR -depth -name '*.chapters.txt' -type f -delete
+
+  printf "\n${GRY}DONE.  CLOSING UP SHOP.${NON}\n\n"
+  cd $WRKDIR
+  unset DS BS WRKDIR AAXDIR BKSDIR RUNDIR FILE UDT CTR GRY CYN WHT DRD YLW NON
+
+  exit 0
+
+}
+
+
+### USE THESE TO ENABLE/DISABLE ABOVE FUNCTIONS ###
+
+
+#initial
+schedule
+convert
+clean
+
+
