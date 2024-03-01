@@ -1,14 +1,24 @@
-# AUDIBLE-CONVERT
-This is the script from the now defunct [AAXtoMP3](https://github.com/KrumpetPirate/AAXtoMP3). Some really good work was thrown at that project.
+AUDIBLE-CONVERT  
+===============  
 
-However, this script is going to need some tweaks in order to be a viable solution for my library.
+Audible AAX/AAXC conversion with emphasis on:
+- automated retreival
+- audio quality
+- single file
+- proper tagging and chaptering
+- directory structure
+- hands off functionality _(or as much as possible)_  
 
-**2024.02.25**
---------------
-- starting fresh
+<br />
 
-**2024.02.26**
---------------
+**2024.02.29**  
+--------------  
+**HAPPY LEAP YEAR!**  
+
+<br />
+
+**2024.02.26**  
+--------------  
 - The current naming scheme of my library uses `<author> / <book title> / <book title>.<ext>`. This may be fairly common of a layout, but when it comes to "book title" well, there are many ways this could be formatted. The majority of my collection is comprised of "series" based books. But there are also single standalone books intermingling in there as well. So for example, I may have a author folder with series and standalone books,
 
   :file_folder: Keith C. Blackmore  
@@ -25,7 +35,7 @@ However, this script is going to need some tweaks in order to be a viable soluti
 
   In order to facilitate this layout, some tweaks to the script were required.
 
-  The script already had built support of [mkb79's](https://github.com/mkb79) [audible-cli](https://github.com/mkb79/audible-cli). This support allowed the script to obtain "series" information. The "audible-cli" tool is a CLI for [mkb79's](https://github.com/mkb79) other package [Audible](https://github.com/mkb79/Audible). This tool sets up the authentication and registration to Audible, but also uses the Audible API to collect book information.  
+  The script already had code support for [mkb79's](https://github.com/mkb79) [audible-cli](https://github.com/mkb79/audible-cli). This support allowed the script to obtain "series" information. The "audible-cli" tool is a CLI for [mkb79's](https://github.com/mkb79) other package [Audible](https://github.com/mkb79/Audible). This tool sets up the authentication and registration to Audible, but also uses the Audible API to collect book information.  
   Being that the script is already setup to use the "Audible" package book information (library.tsv) for series data, I have added additional calls to also extract the "title" and "subtitle" data. With this information I was able to manipulate the folder structure and metadata.  
   - Series books now get: `<series_title>, <series_sequence> - <title>`
   - Standalone books get: `<title> - <subtitle>`
@@ -41,19 +51,35 @@ However, this script is going to need some tweaks in order to be a viable soluti
 - Renamed script to `audible-convert`  
   The script can convert to more than just MP3, so it should have a bit more universal name.  
 
-## Anti-Piracy Notice
-Note that this project **does NOT "crack"** the DRM. It simply allows the user to use their own encryption key (fetched from Audible servers) to decrypt the audiobook in the same manner that the official audiobook playing software does.  
+<br />
 
-Please only use this application for gaining full access to your own audiobooks for archiving/conversion/convenience. DeDRMed audiobooks should not be uploaded to open servers, torrents, or other methods of mass distribution. No help will be given to people doing such things. Authors, retailers, and publishers all need to make a living, so that they can continue to produce audiobooks for us to hear, and enjoy. Don’t be a parasite.
+**2024.02.25**  
+--------------  
+- fresh start  
 
-*<sub>Borrowed from original documentation, who borrow from [Apprentice Alf’s Blog](https://apprenticealf.wordpress.com).</sub>*
+<br />
 
-<br /><br /><br /><br /><br />
-*The original AAXtoMP3 documentation for reference.*  
+> [!WARNING]
+> ## Anti-Piracy Notice
+> Note that this project **does NOT "crack"** the DRM. It simply allows the user to use their own encryption key (fetched from Audible servers) to decrypt the audiobook in the same manner that the official audiobook playing software does.  
+>
+> Please only use this application for gaining full access to your own audiobooks for archiving/conversion/convenience. DeDRMed audiobooks should not be uploaded to open servers, torrents, or other methods of mass distribution. No help will be given to people doing such things. Authors, retailers, and publishers all need to make a living, so that they can continue to produce audiobooks for us to hear, and enjoy. Don’t be a parasite.
+>
+> *<sub>Borrowed from original documentation, who borrowed from [Apprentice Alf’s Blog](https://apprenticealf.wordpress.com).</sub>*
+
+<br />
+
+> [!NOTE]
+>
+> This is the script _(was the script)_ from the now defunct [AAXtoMP3](https://github.com/KrumpetPirate/AAXtoMP3).  Some really good work was thrown at that project.
+> I have however made modifications to better suit my requirements.  
+>
+> *The original AAXtoMP3 documentation for reference is below.*
+
 <details>
-    
-*<summary>AAXtoMP3 Documentation</summary>*
-    
+
+*<summary>AAXtoMP3 Documentation</summary>*  
+
 ## AAXtoMP3
 The purpose of this software is to convert AAX (or AAXC) files to common MP3, M4A, M4B, flac and ogg formats
 through a basic bash script frontend to FFMPEG.
