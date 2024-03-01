@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# REV: 2024022801
+# REV: 2024022901 (happy leap year)
 #
 
 # ========================================================================
@@ -514,20 +514,23 @@ validate_extra_files() {
 save_metadata() {
   local media_file
   media_file="$1"
+
   "$FFPROBE" -i "$media_file" 2> "$metadata_file"
+
   if [[ $(type -P mediainfo) ]]; then
     echo "Mediainfo data START" >> "$metadata_file"
     # Mediainfo output is structured like ffprobe, so we append it to the metadata file and then parse it with get_metadata_value()
     # mediainfo "$media_file" >> "$metadata_file"
     # Or we only get the data we are intrested in:
+
     # Description
     echo "Track_More :" "$(mediainfo --Inform="General;%Track_More%" "$media_file")" >> "$metadata_file"
-    # Narrator
-    echo "nrt :" "$(mediainfo --Inform="General;%nrt%" "$media_file")" >> "$metadata_file"
+
     # Publisher
     echo "pub :" "$(mediainfo --Inform="General;%pub%" "$media_file")" >> "$metadata_file"
     echo "Mediainfo data END" >> "$metadata_file"
   fi
+
   if [[ "${audibleCli}" == "1" ]]; then
     # If we use data we got with audible-cli, we delete conflicting chapter infos
     $SED -i '/^    Chapter #/d' "${metadata_file}"
@@ -564,14 +567,20 @@ CHAPTER\((.key))NAME=\(.value.title)"' "${extra_chapter_file}" > "${tmp_chapter_
       if [[ ! -z "${asin}" ]]; then
         lib_entry=$($GREP "^${asin}" "${library_file}")
         if [[ ! -z "${lib_entry}" ]]; then
-          title=$(echo "${lib_entry}" | awk -F '\t' '{print $2}')
-          subtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $3}')
+          xtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $2}')
+          xsubtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $3}')
+          xartist=$(echo "${lib_entry}" | awk -F '\t' '{print $5}')
+          xalbum_artist=$(echo "${lib_entry}" | awk -F '\t' '{print $5}')
+          xcomposer=$(echo "${lib_entry}" | awk -F '\t' '{print $6}')
           series_title=$(echo "${lib_entry}" | awk -F '\t' '{print $7}')
           series_sequence=$(echo "${lib_entry}" | awk -F '\t' '{print $8}')
           $SED -i "/^  Metadata:/a\\
-    title           : ${title}\\
-    subtitle        : ${subtitle}\\
-    series          : ${series_title}\\
+    xtitle : ${xtitle}\\
+    xsubtitle : ${xsubtitle}\\
+    xartist : ${xartist}\\
+    xalbum_artist : ${xartist}\\
+    xcomposer : ${xcomposer}\\
+    series : ${series_title}\\
     series_sequence : ${series_sequence}" "${metadata_file}"
         fi
       fi
@@ -669,18 +678,18 @@ do
     if [ "${keepArtist}" != "-1" ]; then
       # Choose artist from the one that are present in the metadata. Comma separated list of names
       #                                                                 remove leading space;     'C. S. Lewis' -> 'C.S. Lewis'
-      artist="$(get_metadata_value artist | cut -d',' -f"$keepArtist" | $SED -E 's|^ ||g; s|\. +|\.|g; s|((\w+\.)+)|\1 |g')"
-      album_artist="$(get_metadata_value album_artist | cut -d',' -f"$keepArtist" | $SED -E 's|^ ||g; s|\. +|\.|g; s|((\w+\.)+)|\1 |g')"
+      artist="$(get_metadata_value xartist | cut -d',' -f "$keepArtist" | $SED -E 's|^ ||g; s|\. +|\.|g; s|((\w+\.)+)|\1 |g')"
+      album_artist="$(get_metadata_value xalbum_artist | cut -d',' -f "$keepArtist" | $SED -E 's|^ ||g; s|\. +|\.|g; s|((\w+\.)+)|\1 |g')"
     else
       # The default
-      artist=$(get_metadata_value artist)
-      album_artist="$(get_metadata_value album_artist)"
+      artist=$(get_metadata_value xartist)
+      album_artist="$(get_metadata_value xalbum_artist)"
     fi
   fi
 
-  title="$(get_metadata_value title | $SED -E 's|:|\ -|g')"
+  title="$(get_metadata_value xtitle | $SED -E 's|:|\ -|g')"
   title=${title:0:128}
-  subtitle="$(get_metadata_value subtitle | $SED -E 's|:|\ -|g')"
+  subtitle="$(get_metadata_value xsubtitle | $SED -E 's|:|\ -|g')"
 
   series="$(get_metadata_value series | $SED -E 's|:|\ -|g')"
   series_seq="$(get_metadata_value series_sequence)"
@@ -689,8 +698,8 @@ do
   if [ ! -z "${series}" ]; then
     album="${series}, ${series_sequence}"
   else
-    if [ ! -z "${subtitle}" ]; then
-      album="${subtitle}"
+    if [ ! -z "${xsubtitle}" ]; then
+      album="${xsubtitle}"
     else
       album=""
     fi
@@ -702,13 +711,15 @@ do
 
   # Get more tags with mediainfo
   if [[ $(type -P mediainfo) ]]; then
-    narrator="$(get_metadata_value nrt)"
+    narrator="$(get_metadata_value xcomposer)"
     description="$(get_metadata_value Track_More)"
     publisher="$(get_metadata_value pub)"
+    comment="${asin}"
   else
     narrator=""
     description=""
     publisher=""
+    comment=""
   fi
 
   # Define the output_directory
@@ -758,14 +769,10 @@ do
 
   output_file="${output_directory}/${currentFileNameScheme}.${extension}"
 
-
-
   if [[ "${overwrite}" == "0" ]] && [[ -f "output_file" ]]; then
     rm -f "${metadata_file}" "${tmp_chapter_file}"
     continue
   fi
-
-
 
   mkdir -p "${output_directory}"
 
@@ -804,13 +811,38 @@ do
   else
     nooverwrite="-y"
   fi
-  
+ 
   # -----
   if [ "${carryon}" == "0" ]; then
     # This is the main work horse command.  This is the primary transcoder.
     # This is the primary transcode. All the heavy lifting is here.
-    debug '"$FFMPEG" -loglevel error -stats ${decrypt_param} -i "${aax_file}" "${nooverwrite}" -vn -codec:a "${codec}" -ab ${bitrate} -map_metadata -1 -metadata title="${title}" -metadata artist="${artist}" -metadata album_artist="${album_artist}" -metadata album="${album}" -metadata date="${album_date}" -metadata track="1/1" -metadata genre="${genre}" -metadata copyright="${copyright}" "${output_file}"' 
-      </dev/null "$FFMPEG" -loglevel error \
+
+    debug '"$FFMPEG" -loglevel error \
+        -stats \
+        ${decrypt_param} \
+        -i "${aax_file}" \
+        "${nooverwrite}" \
+        -vn \
+        -codec:a "${codec}" \
+        -ab ${bitrate} \
+        -map_metadata -1 \
+        -metadata title="${title}" \
+        -metadata artist="${artist}" \
+        -metadata album_artist="${album_artist}" \
+        -metadata album="${album}" \
+        -metadata date="${album_date}" \
+        -metadata track="1/1" \
+        -metadata genre="${genre}" \
+        -metadata copyright="${copyright}" \
+          -metadata comment="${comment}" \
+          -metadata description="${description}" \
+          -metadata composer="${narrator}" \
+          -metadata publisher="${publisher}" \
+          -metadata series="${series}" \
+          -metadata series_sequence="${series_sequence}" \
+          -f ${container} \
+        "${output_file}"' 
+    </dev/null "$FFMPEG" -loglevel error \
       -stats \
       ${decrypt_param} \
       -i "${aax_file}" \
@@ -828,11 +860,12 @@ do
       -metadata track="1/1" \
       -metadata genre="${genre}" \
       -metadata copyright="${copyright}" \
-      -metadata description="${description}" \
-      -metadata composer="${narrator}" \
-      -metadata publisher="${publisher}" \
-      -metadata series="${series}" \
-      -metadata series_sequence="${series_sequence}" \
+        -metadata comment="${comment}" \
+        -metadata description="${description}" \
+        -metadata composer="${narrator}" \
+        -metadata publisher="${publisher}" \
+        -metadata series="${series}" \
+        -metadata series_sequence="${series_sequence}" \
       -f ${container} \
       "${output_file}"
 
