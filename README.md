@@ -11,6 +11,38 @@ Audible AAX/AAXC conversion with emphasis on:
 
 <br />
 
+**2024.03.04**  
+--------------  
+Have done a boat load of testing and various modifications to try and get the process automatable.  I have succeeded in automation, however whatever Audible is doing for naming conventions is all over the map.  This makes nailing down a "one size fits all" solution nearly impossible.  For instance, a single author could be spelled differently for each book in the Audible library...
+
+ - Jon Doe
+ - Jon T. Doe
+ - Jon T Doe
+ - Dr. Jon T. Doe
+ - Dr Jon T Doe
+
+You get the picture.  What makes this even more fun to deal with is that any of the book information could change at any time.  Using the [audible-cli](https://github.com/mkb79/audible-cli) from [mkb79](https://github.com/mkb79), I pulled down a library.tsv and had been working through some metadata configurations, but something was off.  It took me a little bit to figure out that during the period of time when I pulled the library.tsv and then pulled another one to see if I screwed something up (about an hour later), a couple of the books I was working with had its information changed.  This has happened a few times already.  So I have resolved to the fact that I need a single source of truth, and something that I can verify myself.  
+
+That said, I have incorporated the ability to use a custom.tsv and have split up a function in the `ac.run` so that there can be a "initial" run, and then moving forward the script can be schedule to run.  The idea behind this is that I can pull down my entire library and generate a library.tsv file.  Then I can go through the library.tsv and manually correct any of the information and make changes how I see fit for my library.  Then I can save this file off as a custom.tsv, and run the book conversions against my own vetted information.  
+
+Scheduling the script afterwards is not such a deal breaker, because I have also included a check for the last time the script had run.  This check allows the script to only look for anything new (also an ability worked into the [audible-cli](https://github.com/mkb79/audible-cli) tool).  By dropping any new books into a "new" directory, makes them much easier to vet before I incorporate them into my main library.  
+
+So, whats been done:  
+
+ - `ac.core`: defaults have been set within the file to create a single m4a file with chapter information
+ - `ac.core`: uses the library.tsv file for <title>, <subtitle>, <artist>, <composer>, <series>, and <series_sequence>
+ - `ac.core`: uses mediainfo for <publisher> and <description>
+ - `ac.core`: ffprobe and [audible-cli](https://github.com/mkb79/audible-cli) provide any remaining tag and chapter information
+ - `ac.core`: variable checks have been implemented to manipulate how a "series" book should be named verses a "standalone"
+ - `ac.core`: the asin is now being plugged into the <comment> tag  
+
+ - `ac.run`: this script was created to take care of how `ac.core` is called and handled
+ - `ac.run`: function for pulling down the entire library and creating the library.tsv file
+ - `ac.run`: function for creating and checking a timestamp of a previous run when downloading new books
+ - `ac.run`: function for checking for a custom.tsv before kicking off a conversion  
+
+<br />
+
 **2024.02.29**  
 --------------  
 **HAPPY LEAP YEAR!**  
