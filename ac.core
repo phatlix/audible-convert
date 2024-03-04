@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# REV: 2024022901 (happy leap year)
+# REV: 2024030401
 #
 
 # ========================================================================
 # Command Line Options
 
 # Usage Synopsis.
-usage=$'\nUsage: audible-convert [--flac] [--aac] [--opus ] [--single] [--level <COMPRESSIONLEVEL>]
+usage=$'\nUsage: ac.core [--flac] [--aac] [--opus ] [--single] [--level <COMPRESSIONLEVEL>]
 [--chaptered] [-e:mp3] [-e:m4a] [-e:m4b] [--authcode <AUTHCODE>] [--no-clobber]
 [--target_dir <PATH>] [--complete_dir <PATH>] [--validate] [--loglevel <LOGLEVEL>]
 [--keep-author <N>] [--author <AUTHOR>] [--{dir,file,chapter}-naming-scheme <STRING>]  
@@ -27,7 +27,7 @@ customCNS=0
 completedir=                # Optional location to move aax files once the decoding is complete.
 container=mp4               # Just in case we need to change the container.  Used for M4A to M4B
 VALIDATE=0                  # Validate the input aax file(s) only.  No Transcoding of files will occur
-loglevel=1                  # Loglevel: 0: Show progress only; 1: default; 2: a little more information, timestamps; 3: debug
+loglevel=0                  # Loglevel: 0: Show progress only; 1: default; 2: a little more information, timestamps; 3: debug
 overwrite=0                 # If you want to overwrite your library and re-rip your files, set this to 1
 carryon=0                   # Default off, If set Transcoding is skipped and chapter splitting starts at chapter continueAt.
 carryonAt=1                 # Optional chapter to continue splitting the chapters.
@@ -291,7 +291,7 @@ fi
 if [[ "x${container}" == "xmp4" && "x$(type -P mp4art)" == "x" ]]; then
   echo "WARN mp4art was not found on your env PATH variable"
   echo "Without it, this script will not be able to add cover art to"
-  echo "m4b files. Note if there are no other errors the audible-convert will"
+  echo "m4b files. Note if there are no other errors the script will"
   echo "continue. However no cover art will be added to the output."
   echo "INSTALL:"
   echo "MacOS:   brew install mp4v2"
@@ -303,7 +303,7 @@ fi
 if [[ "x${container}" == "xmp4" && "x$(type -P mp4chaps)" == "x" ]]; then
   echo "WARN mp4chaps was not found on your env PATH variable"
   echo "Without it, this script will not be able to add chapters to"
-  echo "m4a/b files. Note if there are no other errors the audible-convert will"
+  echo "m4a/b files. Note if there are no other errors the script will"
   echo "continue. However no chapter data will be added to the output."
   echo "INSTALL:"
   echo "MacOS:   brew install mp4v2"
@@ -315,7 +315,7 @@ fi
 if [[ "x$(type -P mediainfo)" == "x" ]]; then
   echo "WARN mediainfo was not found on your env PATH variable"
   echo "Without it, this script will not be able to add the narrator"
-  echo "and description tags. Note if there are no other errors the audible-convert"
+  echo "and description tags. Note if there are no other errors the script"
   echo "will continue. However no such tags will be added to the output."
   echo "INSTALL:"
   echo "MacOS:   brew install mediainfo"
