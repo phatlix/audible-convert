@@ -136,8 +136,8 @@ function clean() {
 
 ### USE THESE TO ENABLE/DISABLE ABOVE FUNCTIONS ###
 
-#initial
-#schedule
+initial
+schedule
 convert
 clean
 
