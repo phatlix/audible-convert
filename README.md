@@ -30,11 +30,11 @@ Scheduling the script afterwards is not such a deal breaker, because I have also
 So, whats been done:  
 
  - `ac.core`: defaults have been set within the file to create a single m4a file with chapter information
- - `ac.core`: uses the library.tsv file for <title>, <subtitle>, <artist>, <composer>, <series>, and <series_sequence>
- - `ac.core`: uses mediainfo for <publisher> and <description>
+ - `ac.core`: uses the library.tsv file for `<title>`, `<subtitle>`, `<artist>`, `<composer>`, `<series>`, and `<series_sequence>`
+ - `ac.core`: uses mediainfo for `<publisher>` and `<description>`
  - `ac.core`: ffprobe and [audible-cli](https://github.com/mkb79/audible-cli) provide any remaining tag and chapter information
  - `ac.core`: variable checks have been implemented to manipulate how a "series" book should be named verses a "standalone"
- - `ac.core`: the asin is now being plugged into the <comment> tag  
+ - `ac.core`: the asin is now being plugged into the `<comment>` tag  
 
  - `ac.run`: this script was created to take care of how `ac.core` is called and handled
  - `ac.run`: function for pulling down the entire library and creating the library.tsv file
