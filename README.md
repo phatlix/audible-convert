@@ -9,6 +9,15 @@ Audible AAX/AAXC conversion with emphasis on:
 - directory structure
 - hands off functionality _(or as much as possible)_  
 
+
+<br />
+
+**2025.01.19**
+-------------- 
+More tweaking.  You know...  tear it all down so I can build it up again.  
+
+Fun.  
+
 <br />
 
 **2024.03.04**  
