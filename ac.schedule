@@ -1,0 +1,141 @@
+#!/bin/bash
+
+DS=$(date -u "+%Y-%m-%dT%TZ");
+
+GRY="\e[90m"
+CYN="\e[96m"
+WHT="\e[97m"
+DRD="\e[31m"
+YLW="\e[93m"
+NON="\e[0m"
+
+WRKDIR=$PWD
+AAXDIR=$WRKDIR/aax
+BKSDIR=$WRKDIR/books
+RUNDIR=$WRKDIR/run
+
+AC=$WRKDIR/ac.core
+MF=$WRKDIR/master.tsv
+UF=$WRKDIR/updchk
+LF=$RUNDIR/library.tsv
+
+PATH="$WRKDIR:$PATH"
+export PATH
+
+cd $RUNDIR
+
+
+function schedule() {
+
+# SCHEDULED UPDATE - WILL READ THE TIME STAMPED FILE 'updchk', AND WILL CHECK FOR ANY NEW BOOKS 
+# SINCE THE LAST RUN AND DOWNLOAD THEM. THE 'updchk' FILE WILL BE UPDATED WITH A NEW TIME STAMP
+# AFTER FINISHING THE MASTER UPDATE FUNCTION. 
+
+  if [ -f $UF ]; then 
+
+    UDT="$(cat $UF)"
+    printf "\n${WHT}LAST UPDATE:${NON} ${CYN}$(date -u -d $UDT)${NON}\n"
+    audible library export --output $LF
+    audible download --start-date "$UDT" --aaxc --cover --cover-size 1215 --chapter --all
+
+  else
+
+    printf "\n${DRD}MISSING ${YLW}'updchk' ${DRD}FILE IN ${YLW}${WRKDIR}${DRD}.\n"
+    printf "\n${CYN}RUN THE FOLLOWING IF YOU NEED TO CREATE THE FILE MANUALLY:${NON}\n${YLW}"
+    CTR='echo $(date -u "+%Y-%m-%dT%TZ") > updchk'
+    printf "%s\n" "$CTR"; eval "$CTR" && rm -f updchk
+    printf "\n${NON}${GRY}ABORTING UPDATE${NON}\n\n"
+    exit 0
+
+  fi
+
+}
+
+function masterup() {
+
+# MASTER UPDATE - WILL COMPARE THE 'updchk' DATE WITH THE PURCHASE DATES IN THE 'library.tsv'
+# FILE, AND ANY NEWER PURCHASES, THE ROW WILL BE COPIED TO THE 'master.tsv' FILE. THE 'updchk'
+# FILE WILL REMAIN UNTOUCHED IF NO NEW ADDITIONS ARE FOUND.
+
+  # check for required files
+  if [[ ! -f "$UF" ]]; then
+
+    echo "Error: $UF does not exist."
+    exit 1
+
+  fi
+
+  if [[ ! -f "$LF" ]]; then
+
+    echo "Error: $LF does not exist."
+    exit 1
+
+  fi
+
+  if [[ ! -f "$MF" ]]; then
+
+    echo "Error: $MF does not exist. Creating it..."
+    touch "$MF"
+
+  fi
+
+  # read timestamp from the updchk file
+  LUP=$(cat "$UF")
+  if ! date -d "$LUP" &>/dev/null; then
+
+    echo "Error: Invalid date format in $UF. Expected ISO 8601 format."
+    exit 1
+
+  fi
+
+  # extract the header and any rows that contain a newer purchase date
+  HDR=$(head -n 1 "$LF")
+  NWR=$(awk -F'\t' -v last_update="$LUP" '
+  BEGIN { OFS = FS }
+  NR == 1 { next } 
+  {
+    # converting date to epoch for comparison
+    cmd = "date -d \"" $18 "\" +%s"
+    cmd | getline purchased_epoch
+    close(cmd)
+
+    cmd = "date -d \"" last_update "\" +%s"
+    cmd | getline last_update_epoch
+    close(cmd)
+
+    if (purchased_epoch > last_update_epoch) { print }
+  }' "$LF")
+
+  # append new rows to master.tsv if there are any
+  if [[ -n "$NWR" ]]; then
+
+    # write header to master.tsv if it's empty
+    if [[ ! -s "$MF" ]]; then
+
+      echo -e "$HDR" > "$MF"
+
+    fi
+
+    # write new rows to master.tsv
+    echo -e "$NWR" >> "$MF"
+
+    # update the updchk file with the most recent purchase date, 
+    # and increase time by 30 seconds (the next check will try to
+    # download the most recent again if the time is the same)
+    ADS=30
+    NWD=$(echo -e "$NWR" | awk -F'\t' '{print $18}' | sort | tail -n 1)
+    echo "$(date -u --date "@$(( $(date +%s --date "${NWD}") + ADS ))" +'%Y-%m-%dT%H:%M:%SZ')" > "$UF"
+    echo "Added $(echo -e "$NWR" | wc -l) new rows to $MF"
+
+  else
+
+    echo "No new audiobooks."
+
+  fi
+
+}
+
+
+schedule
+masterup
+

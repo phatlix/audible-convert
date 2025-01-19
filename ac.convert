@@ -1,0 +1,60 @@
+#!/bin/bash
+
+DS=$(date -u "+%Y-%m-%dT%TZ");
+BS=$(date "+%Y%m%d%H%M");
+
+GRY="\e[90m"
+CYN="\e[96m"
+WHT="\e[97m"
+DRD="\e[31m"
+YLW="\e[93m"
+NON="\e[0m"
+
+WRKDIR=$PWD
+AAXDIR=$WRKDIR/aax
+BKSDIR=$WRKDIR/books
+RUNDIR=$WRKDIR/run
+
+AC=$WRKDIR/ac.core
+MF=$WRKDIR/master.tsv
+LF=$RUNDIR/library.tsv
+
+PATH="$WRKDIR:$PATH"
+export PATH
+
+cd $RUNDIR
+
+
+function convert() {
+
+# CONVERT - SHOULD RUN AFTER THE AAX/AAXC DOWNLOADS. ALL AAX/AAXC RELATED FILES WILL BE
+# MOVED TO THE AAX DIRECTORY AND CONVERTED BOOKS WILL BE PLACED IN THE BOOKS DIRECTORY.
+# AUDIBLE-CONVERT WILL CHECK THE BOOKS DIRECTORY EACH TIME IT IS RAN, TO CHECK FOR ALREADY
+# COMPLETED BOOKS.
+
+  find . -name "*.aaxc" -print0 | while read -d $'\0' FILE
+
+    do
+
+      if [ -f $MF ]; then
+
+        printf "\n${CYN}CHECKING:${NON} ${WHT}$FILE${NON}\n\n"
+        $AC -t $BKSDIR -L $MF "$FILE"
+
+      else
+
+        printf "\n${CYN}CHECKING:${NON} ${WHT}$FILE${NON}\n\n"
+        $AC -t $BKSDIR "$FILE"
+
+      fi
+
+    done
+
+  mv $LF $AAXDIR/$BS.library.tsv
+  find $RUNDIR -type f ! -name .git* -print0 | xargs -0 mv -t $AAXDIR
+
+}
+
+
+convert
+

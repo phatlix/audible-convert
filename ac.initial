@@ -1,0 +1,50 @@
+#!/bin/bash
+
+DS=$(date -u "+%Y-%m-%dT%TZ");
+
+GRY="\e[90m"
+CYN="\e[96m"
+WHT="\e[97m"
+DRD="\e[31m"
+YLW="\e[93m"
+NON="\e[0m"
+
+WRKDIR=$PWD
+AAXDIR=$WRKDIR/aax
+BKSDIR=$WRKDIR/books
+RUNDIR=$WRKDIR/run
+
+AC=$WRKDIR/ac.core
+MF=$WRKDIR/master.tsv
+UF=$WRKDIR/updchk
+LF=$RUNDIR/library.tsv
+
+mkdir -p {"$AAXDIR","$BKSDIR","$RUNDIR"}
+
+PATH="$WRKDIR:$PATH"
+export PATH
+
+cd $RUNDIR
+
+
+function initial() {
+
+# INITIAL - WILL DOWNLOAD YOUR ENTIRE LIBRARY AND A NEW 'library.tsv' FILE.
+# THIS RUN WILL ALSO CREATE THE INITIAL TIME STAMPED 'updchk' FILE, USED BY 
+# THE SCHEDULE FUNCTION.
+
+  audible library export --output $LF
+  audible download --aaxc --cover --cover-size 1215 --chapter --all
+  echo $DS > $UF
+
+  if ! [ -f $AAXDIR/library.tsv.original ]; then
+
+    cp ./library.tsv ./library.tsv.original
+
+  fi
+
+}
+
+
+initial
+
