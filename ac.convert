@@ -55,6 +55,30 @@ function convert() {
 
 }
 
+function clean() {
+
+# CLEAN - WILL CLEAR THE CHAPTERS FILE OUT OF ALL THE BOOK DIRECTORIES. A COMMENTED 
+# COMMAND LINE IS ALSO AVAILABLE TO CLEAR ALL THE IMAGE FILES AS WELL, IF YOU SO CHOOSE 
+# TO REMOVE THEM.  THEY ARE NICE BIG COVER ART IMAGES, SO YOUR CHOICE.  THE BOOKS WILL 
+# HAVE THE COVER ART ALREADY IMPORTED INTO THE FILE, SO THERE REALLY IS NO NEED FOR 
+# THEM UNLESS YOUR DOING SOME ADDITIONAL WORK, OR JUST WANT THEM.
+
+  #printf "\n${CYN}CLEARING JPG COVER ART (excluding poster.jpg files)...${NON}\n"
+  #find $BKSDIR -depth ! -name 'poster.jpg' -name '*.jpg' -type f -delete
+
+  printf "\n${CYN}CLEARING CHAPTER FILES...${NON}\n"
+  find $BKSDIR -depth -name '*.chapters.txt' -type f -delete
+
+  printf "\n${GRY}DONE.  CLOSING UP SHOP.${NON}\n\n"
+  cd $WRKDIR
+  unset DS BS WRKDIR AAXDIR BKSDIR RUNDIR FILE AC MF LF GRY CYN WHT DRD YLW NON
+
+  exit 0
+
+}
+
 
 convert
+clean
+
 

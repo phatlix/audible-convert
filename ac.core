@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# REV: 2024030401
+# REV: 2025012201
 #
 
 # ========================================================================
@@ -335,7 +335,7 @@ if [ -z $auth_code ]; then
 fi
 
 # -----
-# Check the target dir for if set if it is writable
+# Check if the target dir is set and writable
 if [[ "x${targetdir}" != "x"  ]]; then
   if [[ ! -w "${targetdir}" || ! -d "${targetdir}" ]] ; then
     echo "ERROR Target Directory does not exist or is not writable: \"$targetdir\""
@@ -345,7 +345,7 @@ if [[ "x${targetdir}" != "x"  ]]; then
 fi
 
 # -----
-# Check the completed dir for if set if it is writable
+# Check if the completed dir is set and writable
 if [[ "x${completedir}" != "x"  ]]; then
   if [[ ! -w "${completedir}" || ! -d "${completedir}" ]] ; then
     echo "ERROR Complete Directory does not exist or is not writable: \"$completedir\""
@@ -506,7 +506,7 @@ validate_extra_files() {
     debug "library file found"
   fi
 
-  debug "All expected audible-cli related file are here"
+  debug "All expected audible-cli related files are here"
 }
 
 # -----
@@ -528,6 +528,7 @@ save_metadata() {
 
     # Publisher
     echo "pub :" "$(mediainfo --Inform="General;%pub%" "$media_file")" >> "$metadata_file"
+
     echo "Mediainfo data END" >> "$metadata_file"
   fi
 
@@ -597,9 +598,10 @@ CHAPTER\((.key))NAME=\(.value.title)"' "${extra_chapter_file}" > "${tmp_chapter_
 get_metadata_value() {
   local key
   key="$1"
-        # Find the key in the meta data file                                  # Extract field value     # Remove the following /'s  "(Unabridged)  <blanks> at start end and multiples.
-  echo "$($GREP --max-count=1 --only-matching "${key} *: .*" "$metadata_file" | cut -d : -f 2- | $SED -e 's#/##g;s/ (Unabridged)//;s/^[[:blank:]]\+//g;s/[[:blank:]]\+$//g' | $SED 's/[[:blank:]]\+/ /g')"
+        # Find the key in the metadata file                                  # Extract field value     # Remove /'s  "(Unabridged)"  <blanks> at start, end, and multiples. Remove literal "\n". Replace HTML entity &#169; with ©. Remove (P) and text following it.
+  echo "$($GREP --max-count=1 --only-matching "${key} *: .*" "$metadata_file" | cut -d : -f 2- | $SED -e 's#/##g;s/ (Unabridged)//;s/^[[:blank:]]\+//g;s/[[:blank:]]\+$//g;s/\\n//g;s/&#169;/©/g;s/[[:blank:][:punct:]]*(P).*//g' | $SED 's/[[:blank:]]\+/ /g')"
 }
+
 
 # -----
 # specific variant of get_metadata_value bitrate is important for transcoding.
@@ -611,7 +613,8 @@ get_bitrate() {
 # $audibleCli in case the file is aaxc. If the file is the
 # old aax, reset the variable to be the one passed by the user
 originalAudibleCliVar=$audibleCli
-# ========================================================================
+
+# -----
 # Main Transcode Loop
 for aax_file
 do
@@ -677,7 +680,7 @@ do
   else
     if [ "${keepArtist}" != "-1" ]; then
       # Choose artist from the one that are present in the metadata. Comma separated list of names
-      #                                                                 remove leading space;     'C. S. Lewis' -> 'C.S. Lewis'
+      # and remove leading space;     'C. S. Lewis' -> 'C.S. Lewis'
       artist="$(get_metadata_value xartist | cut -d',' -f "$keepArtist" | $SED -E 's|^ ||g; s|\. +|\.|g; s|((\w+\.)+)|\1 |g')"
       album_artist="$(get_metadata_value xalbum_artist | cut -d',' -f "$keepArtist" | $SED -E 's|^ ||g; s|\. +|\.|g; s|((\w+\.)+)|\1 |g')"
     else
@@ -694,35 +697,29 @@ do
   series="$(get_metadata_value series | $SED -E 's|:|\ -|g')"
   series_seq="$(get_metadata_value series_sequence)"
 
-  #if [[ "$series_seq" == *"-"* ]]; then
-  #  series_sequence="Books $(echo "${series_seq}" | sed -e :a -e 's/^.\{1,1\}$/0&/;ta')"
-  #else
-  #  series_sequence="Book $(echo "${series_seq}" | sed -e :a -e 's/^.\{1,1\}$/0&/;ta')"
-  #fi
-
-# Check if the input contains a hyphen
-if [[ "$series_seq" == *"-"* ]]; then
-  # Extract the start and end of the range
-  start=$(echo "$series_seq" | cut -d'-' -f1)
-  end=$(echo "$series_seq" | cut -d'-' -f2)
+  # Check if the series sequence contains a hyphen
+  if [[ "$series_seq" == *"-"* ]]; then
+    # Extract the start and end of the range
+    start=$(echo "$series_seq" | cut -d'-' -f1)
+    end=$(echo "$series_seq" | cut -d'-' -f2)
   
-  # Format each part to be two digits
-  formatted_start=$(printf "%02d" "$start")
-  formatted_end=$(printf "%02d" "$end")
+    # Format each part to be two digits
+    formatted_start=$(printf "%02d" "$start")
+    formatted_end=$(printf "%02d" "$end")
   
-  # Combine them into the final sequence
-  series_sequence="Books ${formatted_start}-${formatted_end}"
-else
-  # Single number case, format to two digits
-  formatted_number=$(printf "%02d" "$series_seq")
-  series_sequence="Book ${formatted_number}"
-fi
+    # Combine them into the final sequence
+    series_sequence="Books ${formatted_start}-${formatted_end}"
+  else
+    # Single number case, format to two digits
+    formatted_number=$(printf "%02d" "$series_seq")
+    series_sequence="Book ${formatted_number}"
+  fi
 
   if [ ! -z "${series}" ]; then
-    album="${series}, ${series_sequence}"
+    album="${series}, ${series_sequence} - $title"
   else
     if [ ! -z "${xsubtitle}" ]; then
-      album="${xsubtitle}"
+      album="${title} - ${xsubtitle}"
     else
       album=""
     fi
@@ -730,34 +727,39 @@ fi
 
   album_date="$(get_metadata_value date)"
   bitrate="$(get_bitrate)k"
-  copyright="$(get_metadata_value copyright)"
+  publisher="$(get_metadata_value pub)"
 
-  # Get more tags with mediainfo
+  if [ ! -z "${publisher}" ]; then
+    copyright="$(get_metadata_value copyright) ℗${publisher}"
+  else
+    copyright="$(get_metadata_value copyright)"
+  fi
+
   if [[ $(type -P mediainfo) ]]; then
     narrator="$(get_metadata_value xcomposer)"
     description="$(get_metadata_value Track_More)"
-    publisher="$(get_metadata_value pub)"
     comment="${asin}"
   else
     narrator=""
     description=""
-    publisher=""
     comment=""
   fi
+
+
 
   # Define the output_directory
   if [ ! -z "${series}" ]; then
     if [ "${customDNS}" == "1" ]; then
       currentDirNameScheme="$(eval echo "${dirNameScheme}")"
     else
-      currentDirNameScheme="$artist/$series, $series_sequence - $title"
+      currentDirNameScheme="$artist/$album"
     fi
   else
     if [ "${customDNS}" == "1" ]; then
       currentDirNameScheme="$(eval echo "${dirNameScheme}")"
     else
       if [ ! -z "${album}" ]; then
-        currentDirNameScheme="$artist/$title - $album"
+        currentDirNameScheme="$artist/$album"
       else
         currentDirNameScheme="$artist/$title"
       fi
@@ -776,14 +778,14 @@ fi
     if [ "${customFNS}" == "1" ]; then
       currentFileNameScheme="$(eval echo "${fileNameScheme}")"
     else
-      currentFileNameScheme="$series_sequence, $title"
+      currentFileNameScheme="$album"
     fi
   else
     if [ "${customFNS}" == "1" ]; then
       currentFileNameScheme="$(eval echo "${fileNameScheme}")"
     else
       if [ ! -z "${album}" ]; then
-        currentFileNameScheme="$title - $album"
+        currentFileNameScheme="$album"
       else
         currentFileNameScheme="$title"
       fi
@@ -809,7 +811,7 @@ fi
   # Big long DEBUG output. Fully describes the settings used for transcoding.
   # Note this is a long debug command. It's not critical to operation. It's purely for people debugging
   # and coders wanting to extend the script.
-  debug_vars "Book and Variable values" title auth_code aaxc aaxc_key aaxc_iv mode aax_file container codec bitrate artist album_artist album album_date genre copyright narrator description publisher currentDirNameScheme output_directory currentFileNameScheme output_file metadata_file working_directory
+  debug_vars "Book and Variable values" title auth_code aaxc aaxc_key aaxc_iv mode aax_file container codec bitrate artist album_artist album album_date genre copyright narrator description currentDirNameScheme output_directory currentFileNameScheme output_file metadata_file working_directory
 
 
   # Display the total length of the audiobook in format hh:mm:ss
@@ -835,68 +837,72 @@ fi
     nooverwrite="-y"
   fi
  
-  # -----
-  if [ "${carryon}" == "0" ]; then
-    # This is the main work horse command.  This is the primary transcoder.
-    # This is the primary transcode. All the heavy lifting is here.
-
-    debug '"$FFMPEG" -loglevel error \
-        -stats \
-        ${decrypt_param} \
-        -i "${aax_file}" \
-        "${nooverwrite}" \
-        -vn \
-        -codec:a "${codec}" \
-        -ab ${bitrate} \
-        -map_metadata -1 \
-        -metadata title="${title}" \
-        -metadata artist="${artist}" \
-        -metadata album_artist="${album_artist}" \
-        -metadata album="${album}" \
-        -metadata date="${album_date}" \
-        -metadata track="1/1" \
-        -metadata genre="${genre}" \
-        -metadata copyright="${copyright}" \
-          -metadata comment="${comment}" \
-          -metadata description="${description}" \
-          -metadata composer="${narrator}" \
-          -metadata publisher="${publisher}" \
-          -metadata series="${series}" \
-          -metadata series_sequence="${series_sequence}" \
-          -f ${container} \
-        "${output_file}"' 
-    </dev/null "$FFMPEG" -loglevel error \
+# -----
+# This is the primary transcode. All the heavy lifting is here.
+execute_ffmpeg() {
+  local album_meta="$1"
+  debug '"$FFMPEG" -loglevel error \
       -stats \
       ${decrypt_param} \
       -i "${aax_file}" \
-      ${nooverwrite} \
+      "${nooverwrite}" \
       -vn \
       -codec:a "${codec}" \
-      ${compression_level_param} \
       -ab ${bitrate} \
       -map_metadata -1 \
       -metadata title="${title}" \
       -metadata artist="${artist}" \
       -metadata album_artist="${album_artist}" \
-      -metadata album="${album}" \
+      -metadata album="${album_meta}" \
       -metadata date="${album_date}" \
-      -metadata track="1/1" \
+      -metadata track="01/01" \
       -metadata genre="${genre}" \
       -metadata copyright="${copyright}" \
-        -metadata comment="${comment}" \
-        -metadata description="${description}" \
-        -metadata composer="${narrator}" \
-        -metadata publisher="${publisher}" \
-        -metadata series="${series}" \
-        -metadata series_sequence="${series_sequence}" \
+      -metadata comment="${comment}" \
+      -metadata description="${description}" \
+      -metadata composer="${narrator}" \
+      -metadata series="${series}" \
+      -metadata series_sequence="${series_sequence}" \
       -f ${container} \
-      "${output_file}"
+      "${output_file}"' 
+  </dev/null "$FFMPEG" -loglevel error \
+    -stats \
+    ${decrypt_param} \
+    -i "${aax_file}" \
+    ${nooverwrite} \
+    -vn \
+    -codec:a "${codec}" \
+    ${compression_level_param} \
+    -ab ${bitrate} \
+    -map_metadata -1 \
+    -metadata title="${title}" \
+    -metadata artist="${artist}" \
+    -metadata album_artist="${album_artist}" \
+    -metadata album="${album_meta}" \
+    -metadata date="${album_date}" \
+    -metadata track="01/01" \
+    -metadata genre="${genre}" \
+    -metadata copyright="${copyright}" \
+    -metadata comment="${comment}" \
+    -metadata description="${description}" \
+    -metadata composer="${narrator}" \
+    -metadata series="${series}" \
+    -metadata series_sequence="${series_sequence}" \
+    -f ${container} \
+    "${output_file}"
+}
 
+  if [ "${carryon}" == "0" ]; then
+    if [[ -n "${series}" || -n "${album}" ]]; then
+      execute_ffmpeg "${album}"
+    else
+      execute_ffmpeg "${title}"
+    fi
     if [ "$((${loglevel} > 0))" == "1" ]; then
       log "Created ${output_file}."
     fi
-    # -----
   fi
+
   # Grab the cover art if available.
   cover_file="${output_directory}/${currentFileNameScheme}.jpg"
   if [ "${carryon}" == "0" ]; then
