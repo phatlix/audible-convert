@@ -565,14 +565,23 @@ CHAPTER\((.key))NAME=\(.value.title)"' "${extra_chapter_file}" > "${tmp_chapter_
     # get extra meta data from library.tsv
     if [[ "${library_file_exists}" == 1 ]]; then
       asin=$(jq -r '.content_metadata.content_reference.asin' "${extra_chapter_file}")
-      if [[ ! -z "${asin}" ]]; then
-        asin=$(printf "%010s" "${asin}" | tr ' ' '0')
+      if [[ -n "${asin}" ]]; then
+        # If the ASIN is purely numeric and less than 10 chars, pad with leading zeros
+        if [[ "$asin" =~ ^[0-9]+$ && ${#asin} -lt 10 ]]; then
+          asin=$(printf "%010s" "${asin}" | tr ' ' '0')
+        fi
+
+        # Search library.tsv while normalizing numeric ASINs
         lib_entry=$(awk -F '\t' -v asin="$asin" '{
-        lib_asin = sprintf("%010d", $1); 
-        if (lib_asin == asin) print $0;
+          lib_asin = $1;
+          if (lib_asin ~ /^[0-9]+$/ && length(lib_asin) < 10) {
+            lib_asin = sprintf("%010s", lib_asin);
+            gsub(/ /, "0", lib_asin);
+          }
+          if (lib_asin == asin) print $0;
         }' "${library_file}")
 
-        if [[ ! -z "${lib_entry}" ]]; then
+        if [[ -n "${lib_entry}" ]]; then
           xtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $2}')
           xsubtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $3}')
           xartist=$(echo "${lib_entry}" | awk -F '\t' '{print $5}')
