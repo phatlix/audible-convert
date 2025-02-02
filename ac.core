@@ -27,11 +27,11 @@ customCNS=0
 completedir=                # Optional location to move aax files once the decoding is complete.
 container=mp4               # Just in case we need to change the container.  Used for M4A to M4B
 VALIDATE=0                  # Validate the input aax file(s) only.  No Transcoding of files will occur
-loglevel=0                  # Loglevel: 0: Show progress only; 1: default; 2: a little more information, timestamps; 3: debug
+loglevel=1                  # Loglevel: 0: Show progress only; 1: default; 2: a little more information, timestamps; 3: debug
 overwrite=0                 # If you want to overwrite your library and re-rip your files, set this to 1
 carryon=0                   # Default off, If set Transcoding is skipped and chapter splitting starts at chapter continueAt.
-carryonAt=1                 # Optional chapter to continue splitting the chapters.
-keepArtist=1                # Default off, if set change author metadata to use the passed argument as field
+carryonAt=0                 # Optional chapter to continue splitting the chapters.
+keepArtist=-1               # Default off, if set change author metadata to use the passed argument as field
 authorOverride=             # Override the author, ignoring the metadata           
 audibleCli=1                # Default off, Use additional data gathered from mkb79/audible-cli
 aaxc_key=                   # Initialize variables, in case we need them in debug_vars
@@ -566,7 +566,12 @@ CHAPTER\((.key))NAME=\(.value.title)"' "${extra_chapter_file}" > "${tmp_chapter_
     if [[ "${library_file_exists}" == 1 ]]; then
       asin=$(jq -r '.content_metadata.content_reference.asin' "${extra_chapter_file}")
       if [[ ! -z "${asin}" ]]; then
-        lib_entry=$($GREP "^${asin}" "${library_file}")
+        asin=$(printf "%010s" "${asin}" | tr ' ' '0')
+        lib_entry=$(awk -F '\t' -v asin="$asin" '{
+        lib_asin = sprintf("%010d", $1); 
+        if (lib_asin == asin) print $0;
+        }' "${library_file}")
+
         if [[ ! -z "${lib_entry}" ]]; then
           xtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $2}')
           xsubtitle=$(echo "${lib_entry}" | awk -F '\t' '{print $3}')
@@ -575,14 +580,14 @@ CHAPTER\((.key))NAME=\(.value.title)"' "${extra_chapter_file}" > "${tmp_chapter_
           xcomposer=$(echo "${lib_entry}" | awk -F '\t' '{print $6}')
           series_title=$(echo "${lib_entry}" | awk -F '\t' '{print $7}')
           series_sequence=$(echo "${lib_entry}" | awk -F '\t' '{print $8}')
-          $SED -i "/^  Metadata:/a\\
-    xtitle : ${xtitle}\\
-    xsubtitle : ${xsubtitle}\\
-    xartist : ${xartist}\\
-    xalbum_artist : ${xartist}\\
-    xcomposer : ${xcomposer}\\
-    series : ${series_title}\\
-    series_sequence : ${series_sequence}" "${metadata_file}"
+          sed -i "/^  Metadata:/a\\
+          xtitle : ${xtitle}\\
+          xsubtitle : ${xsubtitle}\\
+          xartist : ${xartist}\\
+          xalbum_artist : ${xartist}\\
+          xcomposer : ${xcomposer}\\
+          series : ${series_title}\\
+          series_sequence : ${series_sequence}" "${metadata_file}"
         fi
       fi
     fi
