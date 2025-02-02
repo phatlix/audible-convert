@@ -12,6 +12,13 @@ Audible AAX/AAXC conversion with emphasis on:
 
 <br />
 
+**2025.02.02**
+-------------- 
+Added checks for ASIN matching and character length.
+
+
+<br />
+
 **2025.01.21**
 -------------- 
 Fixed up the title and album tagging. Also combined ac.clean into ac.convert (cleanup doesn't need to be a separate step).
