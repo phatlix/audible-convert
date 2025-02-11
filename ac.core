@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# REV: 2025020202
+# REV: 2025021101
 #
 
 # ========================================================================
@@ -716,16 +716,26 @@ do
     # Extract the start and end of the range
     start=$(echo "$series_seq" | cut -d'-' -f1)
     end=$(echo "$series_seq" | cut -d'-' -f2)
-  
-    # Format each part to be two digits
-    formatted_start=$(printf "%02d" "$start")
-    formatted_end=$(printf "%02d" "$end")
-  
+    # Check if it's a decimal number
+    if [[ "$start" == *"."* ]]; then
+      formatted_start=$(printf "%02d.%s" "${start%.*}" "${start#*.}")
+    else
+      formatted_start=$(printf "%02d" "$start")
+    fi
+    if [[ "$end" == *"."* ]]; then
+      formatted_end=$(printf "%02d.%s" "${end%.*}" "${end#*.}")
+    else
+      formatted_end=$(printf "%02d" "$end")
+    fi
     # Combine them into the final sequence
     series_sequence="Books ${formatted_start}-${formatted_end}"
   else
-    # Single number case, format to two digits
-    formatted_number=$(printf "%02d" "$series_seq")
+    # Single number case, check for decimal
+    if [[ "$series_seq" == *"."* ]]; then
+      formatted_number=$(printf "%02d.%s" "${series_seq%.*}" "${series_seq#*.}")
+    else
+      formatted_number=$(printf "%02d" "$series_seq")
+    fi
     series_sequence="Book ${formatted_number}"
   fi
 

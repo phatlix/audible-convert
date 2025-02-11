@@ -10,6 +10,22 @@ Audible AAX/AAXC conversion with emphasis on:
 - hands off functionality _(or as much as possible)_  
 
 
+
+<br />
+
+**2025.02.11**
+-------------- 
+A little re-figuring.
+
+1. Check for hyphen (-) in the sequence:
+ - Extract start and end values.
+ - Handle numbers with decimals and format them correctly.
+ - Format whole numbers with leading zeros.
+2. Handle single numbers:
+ - If it contains a decimal (.), ensure the integer part has a leading zero.
+ - If it’s a whole number, format it as two digits.
+
+
 <br />
 
 **2025.02.02**
