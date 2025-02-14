@@ -13,6 +13,14 @@ Audible AAX/AAXC conversion with emphasis on:
 
 <br />
 
+**2025.02.14**
+-------------- 
+ - Put the overwrite option code into a function and fixed how it is displayed.  
+ - Modified a couple defaults.  
+
+
+<br />
+
 **2025.02.11**
 -------------- 
 A little re-figuring.
